@@ -15,6 +15,7 @@ PARALLEL_JOBS=5
 
 # Extract nameservers from /etc/resolv.conf
 NAMESERVERS=$(awk '/^nameserver/ {print $2}' /etc/resolv.conf)
+NAMESERVERS="$NAMESERVERS 127.0.0.1#LocalUnbound"
 
 # Define DNS providers
 PROVIDERSV4="
