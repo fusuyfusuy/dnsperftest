@@ -7,12 +7,12 @@
 command -v bc > /dev/null || { echo "error: bc not found. Please install bc."; exit 1; }
 command -v drill > /dev/null && dig="drill" || { command -v dig > /dev/null && dig="dig" || { echo "error: dig not found. Please install dnsutils."; exit 1; } }
 
-# Configuration
-WARMUP_RUNS=2
-TEST_RUNS=3
-TIMEOUT=3
-PARALLEL_JOBS=5
-SHOW_PROGRESS=true  # Set to false to disable live progress indicators
+# Configuration - FAST MODE
+WARMUP_RUNS=0          # Skip warmup for speed
+TEST_RUNS=1            # Single run per domain
+TIMEOUT=1              # 1 second timeout max
+PARALLEL_JOBS=10       # More parallel jobs
+SHOW_PROGRESS=true
 
 # Extract nameservers from /etc/resolv.conf and add local Unbound
 NAMESERVERS=$(awk '/^nameserver/ {print $2}' /etc/resolv.conf)
@@ -21,26 +21,13 @@ NAMESERVERS="$NAMESERVERS 127.0.0.1#LocalUnbound"
 # Define DNS providers
 PROVIDERSV4="
 1.1.1.1#Cloudflare
-1.1.1.2#CloudflareMalware
 8.8.8.8#Google
-8.8.4.4#GoogleSecondary
 9.9.9.9#Quad9
-9.9.9.10#Quad9Unsecured
 208.67.222.222#OpenDNS
-208.67.220.220#OpenDNSSecondary
 94.140.14.14#Adguard
-94.140.14.15#AdguardFamily
 76.76.2.0#ControlD
-80.80.80.80#Freenom
 84.200.69.80#DNS.Watch
 216.146.35.35#Dyn
-185.228.168.168#CleanBrowsing
-185.228.168.10#CleanBrowsingAdult
-8.26.56.26#Comodo
-195.46.39.39#SafeDNS
-117.50.11.11#OneDNS
-223.5.5.5#AliDNS
-180.76.76.76#BaiduDNS
 "
 
 PROVIDERSV6="
@@ -161,19 +148,19 @@ total_nameservers=$(wc -w <<< "$NAMESERVERS")
 total_external=0
 [[ -n "$providerstotest" ]] && total_external=$(echo "$providerstotest" | wc -w)
 
-# Calculate estimated time
-estimated_time_per_provider=$((totaldomains * (WARMUP_RUNS + TEST_RUNS) * TIMEOUT / 10))
+# Calculate estimated time (much faster now)
+estimated_time_per_provider=$((totaldomains * TIMEOUT / 2))  # Optimistic estimate
 total_time_local=$((total_nameservers * estimated_time_per_provider))
 total_time_external=$((total_external * estimated_time_per_provider / PARALLEL_JOBS))
 estimated_total=$((total_time_local + total_time_external))
 
-echo "🚀 DNS Performance Benchmarker"
-echo "================================"
-echo "📊 Testing $totaldomains domains with $TEST_RUNS runs each (after $WARMUP_RUNS warmup runs)"
+echo "⚡ FAST DNS Performance Benchmarker"
+echo "=================================="
+echo "📊 Testing $totaldomains domains with single run (no warmup for speed)"
 echo "⏱️  Timeout: ${TIMEOUT}s per query"
 echo "🖥️  Local resolvers: $total_nameservers"
 echo "🌐 External providers: $total_external"
-echo "⌛ Estimated time: ~${estimated_total}s"
+echo "🚀 Estimated time: ~${estimated_total}s"
 echo ""
 printf "%-20s %8s %8s %8s %8s %8s\n" "Provider" "Avg" "Median" "Min" "Max" "Success"
 printf "%-20s %8s %8s %8s %8s %8s\n" "--------" "---" "------" "---" "---" "-------"
@@ -258,12 +245,14 @@ echo "  ipv4: Test IPv4 providers only (default)"
 echo "  ipv6: Test IPv6 providers only"
 echo "  all:  Test both IPv4 and IPv6 providers"
 echo "  local: Test only local Unbound server"
-echo "  --full: Use extended domain list"
+echo "  --full: Use extended domain list (16 domains vs 5)"
 echo ""
-echo "💡 Features:"
-echo "  • Live progress indicators"
-echo "  • Cache warming for accurate results"
-echo "  • Parallel testing for speed"
-echo "  • Comprehensive statistics"
+echo "⚡ FAST MODE Features:"
+echo "  • No warmup runs for maximum speed"
+echo "  • Single test run per domain"
+echo "  • 1 second timeout"
+echo "  • Parallel testing (10 concurrent)"
+echo "  • Optimized provider list"
+echo "  • Results in ~10-30 seconds"
 
 exit 0
